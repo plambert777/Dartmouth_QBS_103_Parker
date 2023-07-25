@@ -1,0 +1,127 @@
+---
+title: "Final Project 1"
+author: "Parker Lambert"
+date: "2023-07-24"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Name: Parker Lambert
+
+Class: 103
+
+Assignment: Final Project 1
+
+Due: 7/25/23
+
+# Final Project 1
+
+### Libraries
+
+```{r, results='hide'}
+library(tidyverse)
+library(ggplot2)
+library(tibble)
+library(hrbrthemes)
+```
+
+### Import Data and Wrangle
+
+```{r}
+# importing data from file
+GE <- read.csv("QBS103_finalProject_geneExpression.csv")
+#summary(GE)
+MD <- read.csv("QBS103_finalProject_metadata.csv")
+# transpose the GE data table
+TGE <- setNames(data.frame(t(GE[,-1])),GE[,1])
+TGE2 <- tibble::rownames_to_column(TGE,'participant_id')
+# linking the two data tables
+df <- full_join(TGE2,MD,by = "participant_id")
+#df
+```
+
+## Identify from Data
+
+### One Gene
+
+The gene I have selected is `ABCF2` official name is: `ATP binding cassette subfamily F member 2`
+
+It is a member of the ATP-Binding cassette transporter super-family. It helps with transport of various molecules across the extra- and intracellular membranes. Alterations in this gene may be involved in cancer progression.
+
+*All information came from the: [National Library of Medicine](https://www.ncbi.nlm.nih.gov/gene/10061)*
+
+### Continuous Covariate
+
+The continuous covariate I selected is `ferritin.ng.ml`
+
+### Two Categorical Covariates
+
+The two categorical covariates are `sex` and `mechanical_ventilation`
+
+## Histogram
+
+```{r, warning=FALSE}
+# select gene
+ggplot(df,aes(df$ABCF2)) +
+  # choose histogram
+  geom_histogram(binwidth = 1) +
+  # add labels
+  labs(title = 'Gene Expression Histogram',y= 'Frequency',x='ABCF2 Expression') +
+  # make pretty
+  theme_ipsum()
+```
+
+## Scatterplot
+
+```{r,warning=FALSE}
+# select desired collumn
+df2 <- df |>
+  select(ferritin.ng.ml.,ABCF2)
+# make ferritin an integer
+df2$ferritin.ng.ml. <- as.integer(df2$ferritin.ng.ml.)
+# remove na
+#df2 |> 
+#  na.omit()
+#summary(df2)
+```
+
+```{r, warning=FALSE}
+# select collumns 
+ggplot(df2,aes(df2$ABCF2,df2$ferritin.ng.ml.)) +
+  # choose scatterplot
+  geom_point() +
+  #label the plot
+  labs(title = 'Gene ABCF2 by Ferritin Level',subtitle = 'Ferritin Normal Range is 24 to 336 ng/ml', x = 'Gene ANCF2', y = 'Ferritin ng/ml') +
+  # make pretty by adding theme
+  theme_ipsum()
+```
+
+## Box Plot
+
+```{r}
+# make sex a factor
+df$sex<-factor(df$sex)
+# remove the unknwon
+dff <- df[df$sex != " unknown",]
+# refactor sex and save to new df
+dff$sex <- factor(dff$sex, levels = c(' male', ' female'))
+# make mechanical_ventilation a factor
+dff$mechanical_ventilation <- factor(dff$mechanical_ventilation)
+#dff$mechanical_ventilation
+```
+
+```{r}
+# select columns
+ggplot(data = na.omit(dff[,c('ABCF2','sex','mechanical_ventilation')]),aes(sex,ABCF2,color=mechanical_ventilation)) +
+  # choose boxplot
+  geom_boxplot() +
+  # create labels
+  labs(title = 'Gene expression by Sex and Ventilation',x = 'Sex', y = 'Gene ABCF2', color = 'Mechanical Ventilation') +
+  # select theme
+  theme_ipsum()
+```
