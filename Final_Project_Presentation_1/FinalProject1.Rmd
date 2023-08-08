@@ -3,8 +3,8 @@ title: "Final Project 1"
 author: "Parker Lambert"
 date: "2023-07-24"
 output:
-  pdf_document: default
   html_document: default
+  pdf_document: default
 ---
 
 ```{r setup, include=FALSE}
@@ -43,6 +43,7 @@ TGE2 <- tibble::rownames_to_column(TGE,'participant_id')
 # linking the two data tables
 df <- full_join(TGE2,MD,by = "participant_id")
 #df
+p2 <- df
 ```
 
 ## Identify from Data
@@ -71,9 +72,9 @@ ggplot(df,aes(df$ABCF2)) +
   # choose histogram
   geom_histogram(binwidth = 1) +
   # add labels
-  labs(title = 'Gene Expression Histogram',y= 'Frequency',x='ABCF2 Expression') +
+  labs(title = 'Gene Expression Histogram',y= 'Number of Patients',x='ABCF2 Expression')# +
   # make pretty
-  theme_ipsum()
+  #theme_ipsum()
 ```
 
 ## Scatterplot
@@ -96,9 +97,9 @@ ggplot(df2,aes(df2$ABCF2,df2$ferritin.ng.ml.)) +
   # choose scatterplot
   geom_point() +
   #label the plot
-  labs(title = 'Gene ABCF2 by Ferritin Level',subtitle = 'Ferritin Normal Range is 24 to 336 ng/ml', x = 'Gene ANCF2', y = 'Ferritin ng/ml') +
+  labs(title = 'Gene ABCF2 by Ferritin Level',subtitle = 'Ferritin Normal Range is 24 to 336 ng/ml', x = 'Gene ANCF2', y = 'Ferritin ng/ml')# +
   # make pretty by adding theme
-  theme_ipsum()
+  #theme_ipsum()
 ```
 
 ## Box Plot
@@ -121,7 +122,64 @@ ggplot(data = na.omit(dff[,c('ABCF2','sex','mechanical_ventilation')]),aes(sex,A
   # choose boxplot
   geom_boxplot() +
   # create labels
-  labs(title = 'Gene expression by Sex and Ventilation',x = 'Sex', y = 'Gene ABCF2', color = 'Mechanical Ventilation') +
+  labs(title = 'Gene expression by Sex and Ventilation',x = 'Sex', y = 'Gene ABCF2', color = 'Mechanical Ventilation') #+
   # select theme
-  theme_ipsum()
+  #theme_ipsum()
+```
+
+# Final Project 2
+
+Build a function to create the plots you made for Presentation 1, incorporating feedback you received from your first presentation on improving plot design (10 pts) Functions should take the following input:
+
+1.  The Name of the Data Frame
+2.  A list of 1 or more gene names
+3.  1 Continuous Covariate
+4.  A list of 2 Categorical Covariates
+
+```{r}
+plot_vars <- function(data, gene, cont_var,cata_vars){
+  for (gn in gene){
+    plot_hist(data,gn)
+    plot_scatter(data,gn,cont_var)
+    plot_boxplot(data,gn,cata_vars)
+  }
+}
+plot_hist <- function(data,gene){
+  print(ggplot(data,aes_string(gene)) +
+    geom_histogram(color='white') +
+    labs(
+      title = substitute(paste('Expression of ',italic(gene)), list(gene = gene)),
+      x = substitute(paste(italic(gene)), list(gene = gene)),
+      y = substitute(paste('Number of ',italic(gene)), list(gene = gene))))
+}
+plot_scatter <- function(data,gene,cont_var){
+  print(ggplot(data,aes_string(gene, cont_var)) +
+    geom_point() +
+    labs(
+      title = substitute(paste(italic(gene), ' by ', cont_var), list(gene = gene)), 
+      x = cont_var, 
+      y = substitute(paste('Expression of ',italic(gene)), list(gene = gene))))
+}
+plot_boxplot <- function(data,gene,cata_vars){
+  print(ggplot(data,aes_string(cata_vars[[1]],gene,color = cata_vars[[2]])) +
+    # choose boxplot
+    geom_boxplot() +
+    labs(
+      title = paste(gene, 'by', cata_vars[[1]], 'and', cata_vars[[2]],sep=' '),
+      x = cata_vars[[1]], 
+      y = substitute(paste(italic(gene)), list(gene = gene)), 
+      color = cata_vars[[2]]))
+}
+
+```
+
+```{r, warning=FALSE}
+data2 <- df
+data2$age <- as.integer(data2$age)
+data2 <- data2[!is.na(data2$age), ]
+#plot_vars(data2, c('APOA1', 'CD24'), 'age',c('sex','mechanical_ventilation'))
+```
+
+```{r, warning=FALSE}
+plot_vars(data2, c('APOA1', 'CD24', 'MPO'), 'age',c('sex','mechanical_ventilation'))
 ```
