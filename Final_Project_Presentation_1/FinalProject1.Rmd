@@ -28,6 +28,11 @@ library(tidyverse)
 library(ggplot2)
 library(tibble)
 library(hrbrthemes)
+# for part 3
+library(vtable)
+library(corrplot)
+library(pheatmap)
+library(ggridges)
 ```
 
 ### Import Data and Wrangle
@@ -138,6 +143,7 @@ Build a function to create the plots you made for Presentation 1, incorporating 
 
 ```{r}
 plot_vars <- function(data, gene, cont_var,cata_vars){
+  # loop so that every gene is graphed 3 times
   for (gn in gene){
     plot_hist(data,gn)
     plot_scatter(data,gn,cont_var)
@@ -146,17 +152,17 @@ plot_vars <- function(data, gene, cont_var,cata_vars){
 }
 plot_hist <- function(data,gene){
   print(ggplot(data,aes_string(gene)) +
-    geom_histogram(color='white') +
+    geom_histogram(color='#ee7674',fill = '#f9b5ac') +
     labs(
       title = substitute(paste('Expression of ',italic(gene)), list(gene = gene)),
       x = substitute(paste(italic(gene)), list(gene = gene)),
-      y = substitute(paste('Number of ',italic(gene)), list(gene = gene))))
+      y = 'Number of Subjects'))
 }
 plot_scatter <- function(data,gene,cont_var){
   print(ggplot(data,aes_string(gene, cont_var)) +
     geom_point() +
     labs(
-      title = substitute(paste(italic(gene), ' by ', cont_var), list(gene = gene)), 
+      title = substitute(paste(italic(gene), ' by ', cont_var), list(gene = gene,cont_var=cont_var)), 
       x = cont_var, 
       y = substitute(paste('Expression of ',italic(gene)), list(gene = gene))))
 }
@@ -176,10 +182,161 @@ plot_boxplot <- function(data,gene,cata_vars){
 ```{r, warning=FALSE}
 data2 <- df
 data2$age <- as.integer(data2$age)
+data2$ferritin.ng.ml. <- as.integer(data2$ferritin.ng.ml.)
 data2 <- data2[!is.na(data2$age), ]
 #plot_vars(data2, c('APOA1', 'CD24'), 'age',c('sex','mechanical_ventilation'))
 ```
 
 ```{r, warning=FALSE}
 plot_vars(data2, c('APOA1', 'CD24', 'MPO'), 'age',c('sex','mechanical_ventilation'))
+```
+
+# Final Project 3
+
+## Table of Summary Statistics for Covariates
+
+```{r}
+# using function from the library vtable
+data2 |>
+  select('age','ferritin.ng.ml.','sex','mechanical_ventilation') |>
+  sumtable()
+```
+
+## Final Figures 
+
+The feedback I received after the first round was:
+
+1.  Add Gene Name to plot titles and Italicize Gene Name.
+2.  Center titles and labeles and increase size.
+3.  Add horizontal bars indicating the normal range for ferritin and make histogram more readable with outline.
+
+The feedback from the second round was:
+
+1.  Capitalize legends and titles where appropriate.
+2.  Remove unknowns and not it somewhere.
+3.  Center Titles.
+4.  Flip X and Y in scatter plot.
+
+### Histogram
+
+```{r,warning=FALSE}
+# select gene
+ggplot(df,aes(df$ABCF2)) +
+  # choose histogram
+  geom_histogram(binwidth = 1,color='#ee7674',fill = '#f9b5ac') +
+  # add labels
+  labs(
+    title = substitute(paste('Gene ',italic('ABCF2'),' Expression Histogram')),
+    y= 'Number of Patients',
+    x= substitute(paste(italic('ABCF2'),' Expression'))
+  ) +
+  theme(plot.title = element_text(hjust = 0.5,size = 16))
+    
+  
+```
+
+### Scatterplot
+
+```{r,warning=FALSE}
+# select collumns 
+ggplot(df2,aes(df2$ABCF2,df2$ferritin.ng.ml.)) +
+  # choose scatterplot
+  geom_point() +
+  #label the plot
+  labs(
+    title = substitute(paste('Gene ',italic('ABCF2'),' by Ferritin Level')),
+    subtitle = 'Ferritin Normal Range is 24 to 336 ng/ml', 
+    x = substitute(paste('Gene ',italic('ABCF2'),' Expression')), 
+    y = 'Ferritin ng/ml'
+  ) +
+  # add lines for normal range
+  geom_hline(yintercept = 24,linetype = 'dashed' , color = '#ee7674') +
+  geom_hline(yintercept = 336,linetype = 'dashed' , color = '#ee7674') +
+  # center title
+  theme(
+    plot.title = element_text(hjust = 0.5,size = 16),
+    plot.subtitle = element_text(hjust = 0.5, colour = '#ee7674')
+    
+    )
+```
+
+### Boxplot
+
+```{r}
+# select columns
+ggplot(data = na.omit(dff[,c('ABCF2','sex','mechanical_ventilation')]),aes(sex,ABCF2,color=mechanical_ventilation)) +
+  # choose boxplot
+  geom_boxplot() +
+  # jitter points because others did
+  geom_jitter(position = position_jitterdodge(jitter.width = 0.1)) +
+  # create labels
+  labs(
+    title = substitute(paste('Gene ',italic('ABCF2'),' Expression by Sex and Ventilation')),
+    x = 'Sex', 
+    y = substitute(paste(italic('ABCF2'),' Expression')), 
+    color = 'Mechanical \nVentilator used'
+  ) #+
+  # select theme center title
+  #theme(plot.title = element_text(hjust = 0.5,size = 16))
+```
+
+## Heatmap
+
+1.  Heatmap should include at least 10 genes
+2.  Include tracking bars for your two selected categorical covariates from your boxplots.
+3.  Heatmaps should include clustered rows and columns (mention which clustering\
+    algorithm used in your figure caption)
+
+```{r}
+# data wrangling
+corrDF <- df |> 
+  select('participant_id','APOA1','APOA2','MPO','ABCF3','VWF','A2M','BPI','AAMP','AARS2','AASS','sex','mechanical_ventilation')
+
+```
+
+```{r}
+# heat map
+
+cor(corrDF[2:11], use = "complete.obs") |>
+  corrplot(method = 'color')
+```
+
+```{r}
+pheatmap(
+  cor(corrDF[2:11], use = "complete.obs"),
+  cluster_distance_rows = 'euclidean',
+  cluster_distance_cols = 'euclidean'
+)
+```
+
+## Self Selected Plot
+
+### Violin Plot
+
+```{r}
+# select columns
+ggplot(data = na.omit(dff[,c('ABCF2','sex','mechanical_ventilation')]),aes(sex,ABCF2)) +
+  # choose boxplot
+  geom_violin(alpha = 0.5) +
+  # create labels
+  labs(
+    title = substitute(paste('Gene ',italic('ABCF2'),' Expression by Sex')),
+    x = 'Sex', 
+    y = substitute(paste(italic('ABCF2'),' Expression')), 
+    color = 'Mechanical \nVentilator used'
+  )
+```
+
+### Density Plot
+
+```{r,warning=FALSE}
+ggplot(df2,aes(df2$ferritin.ng.ml.)) +
+  geom_density() +
+  labs(
+    title = 'Density of Ferritin',
+    x = 'Ferritin (ng/ml)',
+    y = 'Density'
+  ) +
+  theme(
+    plot.title = element_text(hjust = 0.5,size = 16))
 ```
